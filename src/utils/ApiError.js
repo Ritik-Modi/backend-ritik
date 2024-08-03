@@ -1,7 +1,7 @@
 class ApiError extends Error {
   constructor(
     statusCode,
-    massage = "Somthing went wrong",
+    massage = "Something went wrong",
     errors = [],
     stack = ""
   ) {
