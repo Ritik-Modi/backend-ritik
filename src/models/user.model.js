@@ -26,11 +26,11 @@ const userSchema = new Schema(
       index: true,
     },
     avatar: {
-      type: String, // cloudinary URL
+      type: String, // Cloudinary URL
       required: true,
     },
     coverimage: {
-      type: String, // cloudinary URL
+      type: String, // Cloudinary URL
     },
     watchHistory: [
       {
@@ -40,55 +40,50 @@ const userSchema = new Schema(
     ],
     password: {
       type: String,
-      required: [true, "password is required"],
+      required: [true, "Password is required"],
     },
     refreshToken: {
       type: String,
     },
   },
-
   { timestamps: true }
 );
 
-// password encryption
+// Password encryption
 userSchema.pre("save", async function (next) {
-  if (!this.isModified()) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
+  if (!this.isModified("password")) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
-// custom methods in middleware for password compare
-userSchema.methods.isPasswordCorrect = async function (password) {
-  return await bcrypt.compare(password, this.password);
+// Custom methods in middleware for password comparison
+userSchema.methods.isPasswordCorrect = function (password) {
+  return bcrypt.compare(password, this.password);
 };
 
-// jwt token generation method
-userSchema.methods.generateAccessToken = async function () {
-  return await jwt.sign(
+// JWT token generation method
+userSchema.methods.generateAccessToken = function () {
+  return jwt.sign(
     {
-      // payload : from database
       _id: this._id,
       email: this.email,
       username: this.username,
       fullName: this.fullName,
     },
     process.env.ACCESS_TOKEN_SECRET,
-    {
-      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-    }
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
   );
 };
-userSchema.methods.generateRefreshToken = async function () {
-  return await jwt.sign(
-    {
-      // payload : from database
-      _id: this._id,
-    },
-    process.env.REFRESH_TOKEN_SECRET,
-    {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-    }
-  );
+
+userSchema.methods.generateRefreshToken = function () {
+  return jwt.sign({ _id: this._id }, process.env.REFRESH_TOKEN_SECRET, {
+    expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+  });
 };
 
 export const User = mongoose.model("User", userSchema);
